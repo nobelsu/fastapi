@@ -8,9 +8,9 @@ app = FastAPI()
 
 metadata.create_all(engine)
 
-@app.post("/insurance/", response_model=Insurance)
+@app.post("/insurance/", response_model=Insurance) # what is the purpose of response_model here?
 async def create_insurance(data: InsuranceIn):
-    query = insurance_table.insert().values(**data.model_dump())
+    query = insurance_table.insert().values(**data.model_dump()) # what format is the data here in? 
     last_record_id = await database.execute(query)
     return {**data.model_dump(), "id": last_record_id}
 
@@ -29,7 +29,7 @@ async def get_one(insurance_id: int):
 
 @app.put("/insurance/{insurance_id}", response_model=Insurance)
 async def update_insurance(insurance_id: int, data: InsuranceIn):
-    query = insurance_table.update().where(insurance_table.c.id == insurance_id).values(**data.dict())
+    query = insurance_table.update().where(insurance_table.c.id == insurance_id).values(**data.model_dump())
     await database.execute(query)
     return {**data.model_dump(), "id": insurance_id}
 
