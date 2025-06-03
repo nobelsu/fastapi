@@ -49,3 +49,9 @@ async def update_insurance(insurance_id: int, insurance_new: Insurance):
             insurances[index] = insurance_new
             return {"insurance": insurance_new}
     return {"error": "Insurance not found"}
+
+@app.delete("/insurance") 
+async def delete_all_insurances():
+    global insurances
+    insurances = []
+    return {"message": "All insurances deleted successfully"}
