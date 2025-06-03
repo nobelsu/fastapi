@@ -10,9 +10,9 @@ metadata.create_all(engine)
 
 @app.post("/insurance/", response_model=Insurance)
 async def create_insurance(data: InsuranceIn):
-    query = insurance_table.insert().values(**data.dict())
+    query = insurance_table.insert().values(**data.model_dump())
     last_record_id = await database.execute(query)
-    return {**data.dict(), "id": last_record_id}
+    return {**data.model_dump(), "id": last_record_id}
 
 @app.get("/insurance/", response_model=List[Insurance])
 async def get_all():
@@ -31,10 +31,16 @@ async def get_one(insurance_id: int):
 async def update_insurance(insurance_id: int, data: InsuranceIn):
     query = insurance_table.update().where(insurance_table.c.id == insurance_id).values(**data.dict())
     await database.execute(query)
-    return {**data.dict(), "id": insurance_id}
+    return {**data.model_dump(), "id": insurance_id}
 
 @app.delete("/insurance/{insurance_id}")
 async def delete_insurance(insurance_id: int):
     query = insurance_table.delete().where(insurance_table.c.id == insurance_id)
     await database.execute(query)
     return {"message": "Insurance deleted successfully"}
+
+@app.delete("/insurance/")
+async def delete_all():
+    query = insurance_table.delete()
+    await database.execute(query)
+    return {"message": "All insurances deleted successfully"}
