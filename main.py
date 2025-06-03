@@ -1,57 +1,40 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-# import duckdb
+from fastapi import FastAPI, HTTPException
+from config.database import database, engine, metadata
+from models.models import insurance_table
+from schemas.schemas import Insurance, InsuranceIn
+from typing import List
 
 app = FastAPI()
-# db = duckdb.connect("data/insurances.db")
 
-class Insurance(BaseModel):
-    id: int
-    policy_number: str
-    provider: str
-    holder_name: str
+metadata.create_all(engine)
 
-insurances = []
-insuranceCount = 0
+@app.post("/insurance/", response_model=Insurance)
+async def create_insurance(data: InsuranceIn):
+    query = insurance_table.insert().values(**data.dict())
+    last_record_id = await database.execute(query)
+    return {**data.dict(), "id": last_record_id}
 
-@app.get("/insurance")
-async def get_insurances():
-    global insurances
-    return {"insurances": insurances}
+@app.get("/insurance/", response_model=List[Insurance])
+async def get_all():
+    query = insurance_table.select()
+    return await database.fetch_all(query)
 
-@app.get("/insurance/{insurance_id}")
-async def get_insurance(insurance_id: int):
-    global insurances
-    for insurance in insurances:
-        if insurance.id == insurance_id:
-            return {"insurance": insurance}
-    return {"error": "Insurance not found"}
+@app.get("/insurance/{insurance_id}", response_model=Insurance)
+async def get_one(insurance_id: int):
+    query = insurance_table.select().where(insurance_table.c.id == insurance_id)
+    result = await database.fetch_one(query)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Insurance not found")
+    return result
 
-@app.post("/insurance")
-async def create_insurance(insurance: Insurance):
-    global insurances, insuranceCount
-    insurance.id = insuranceCount
-    insuranceCount += 1
-    insurances.append(insurance)
-    return {"insurance": insurance}
+@app.put("/insurance/{insurance_id}", response_model=Insurance)
+async def update_insurance(insurance_id: int, data: InsuranceIn):
+    query = insurance_table.update().where(insurance_table.c.id == insurance_id).values(**data.dict())
+    await database.execute(query)
+    return {**data.dict(), "id": insurance_id}
 
 @app.delete("/insurance/{insurance_id}")
 async def delete_insurance(insurance_id: int):
-    global insurances
-    insurances = [ins for ins in insurances if ins.id != insurance_id]
+    query = insurance_table.delete().where(insurance_table.c.id == insurance_id)
+    await database.execute(query)
     return {"message": "Insurance deleted successfully"}
-
-@app.put("/insurance/{insurance_id}")
-async def update_insurance(insurance_id: int, insurance_new: Insurance):
-    global insurances
-    for index, insurance in enumerate(insurances):
-        if insurance.id == insurance_id:
-            insurances[index] = insurance_new
-            return {"insurance": insurance_new}
-    return {"error": "Insurance not found"}
-
-@app.delete("/insurance") 
-async def delete_all_insurances():
-    global insurances
-    insurances = []
-    return {"message": "All insurances deleted successfully"}
