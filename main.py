@@ -6,7 +6,14 @@ from typing import List
 
 app = FastAPI()
 
-metadata.create_all(engine)
+@app.on_event("startup")
+async def startup():
+    await database.connect()
+    metadata.create_all(engine) # what is an engine; what metadata?
+
+@app.on_event("shutdown")
+async def shutdown():
+    await database.disconnect()
 
 @app.post("/insurance/", response_model=Insurance) # what is the purpose of response_model here?
 async def create_insurance(data: InsuranceIn):
